@@ -67,13 +67,13 @@ def check_and_format_names(
     formatted_names = format_names(names_to_format, prefix)
 
     if not bypass_validation:
-        validation.validate_list_of_names(
+        error_messages = validation.validate_list_of_names(
             formatted_names,
             prefix,
-            "error",
             name_templates=name_templates,
-            log=True,
         )
+        for message in error_messages:
+            validation.raise_display_mode(message, "error", log=True)
 
     return formatted_names + reserved_keywords
 

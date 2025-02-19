@@ -392,17 +392,18 @@ def search_for_wildcards(
         will search for subjects rather than sessions.
 
     """
-    new_all_names = []
+    new_all_names: List[str] = []
     for name in all_names:
         if canonical_tags.tags("*") in name:
             name = name.replace(canonical_tags.tags("*"), "*")
 
+            matching_names: List[str]
             if sub:
-                matching_names = search_sub_or_ses_level(
+                matching_names = search_sub_or_ses_level(  # type: ignore
                     cfg, base_folder, local_or_central, sub, search_str=name
                 )[0]
             else:
-                matching_names = search_sub_or_ses_level(
+                matching_names = search_sub_or_ses_level(  # type: ignore
                     cfg, base_folder, local_or_central, search_str=name
                 )[0]
 
@@ -422,6 +423,7 @@ def search_for_wildcards(
 # -----------------------------------------------------------------------------
 
 
+# @overload: Cannot get type overloading to work with this function.
 def search_sub_or_ses_level(
     cfg: Configs,
     base_folder: Path,
@@ -431,7 +433,7 @@ def search_sub_or_ses_level(
     search_str: str = "*",
     verbose: bool = True,
     return_full_path: bool = False,
-) -> Tuple[List[str], List[str]]:
+) -> Tuple[List[str] | List[Path], List[str]]:
     """
     Search project folder at the subject or session level.
     Only returns folders

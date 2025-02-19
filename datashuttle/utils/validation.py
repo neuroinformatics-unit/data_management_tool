@@ -24,6 +24,13 @@ from datashuttle.utils.custom_exceptions import NeuroBlueprintError
 # -----------------------------------------------------------------------------
 
 
+def get_missing_prefix_error(name, prefix, path_):
+    return handle_path(
+        f"MISSING_PREFIX: The prefix {prefix} was not found in the name: {name}",
+        path_,
+    )
+
+
 def get_bad_value_error(name, prefix, path_):
     return handle_path(
         f"BAD_VALUE: The value for prefix {prefix} in name {name} is not an integer.",
@@ -107,9 +114,7 @@ def handle_path(message, path_):
 def validate_list_of_names(
     path_or_name_list: List[Path] | List[str],
     prefix: Prefix,
-    display_mode: DisplayMode = "error",
     name_templates: Optional[Dict] = None,
-    log: bool = True,
 ) -> List[str]:
     """
     Validate a list of subject or session names, ensuring
@@ -151,22 +156,6 @@ def validate_list_of_names(
 
         path_, name = get_path_and_name(path_or_name)
 
-        def prefix_is_duplicate_or_has_bad_values(name, prefix, path_):
-            """ """
-            value = utils.get_value_from_key_regexp(name, prefix)
-
-            if len(value) == 0:
-                return ["NO VALUE ERROR"]
-
-            if len(value) > 1:
-                return [get_duplicate_prefix_error(name, prefix, path_)]
-
-            try:
-                int(value[0])
-                return []
-            except ValueError:
-                return [get_bad_value_error(name, prefix, path_)]
-
         error_messages += prefix_is_duplicate_or_has_bad_values(
             name, prefix, path_
         )
@@ -183,7 +172,7 @@ def validate_list_of_names(
     # both of these are O(n^2)
     stripped_path_or_names_list = strip_invalid_names(
         path_or_name_list, prefix
-    )  # TODO
+    )
 
     for path_or_name in stripped_path_or_names_list:
 
@@ -193,45 +182,32 @@ def validate_list_of_names(
             name, stripped_path_or_names_list, prefix
         )
 
-        error_messages += value_lengths_are_inconsistent(
-            stripped_path_or_names_list, prefix
-        )
-
-    """
-    # new_name_duplicates_existing
-    # value_lengths_are_inconsistent
-
-    tests_to_run = [
-        lambda: name_begins_with_bad_key(path_or_name_list, prefix),
-        lambda: names_include_special_characters(path_or_name_list),
-        lambda: dashes_and_underscore_alternate_incorrectly(path_or_name_list),
-        lambda: datetime_are_iso_format(path_or_name_list),
-        lambda: names_dont_match_templates(
-            path_or_name_list, prefix, name_templates
-        ),
-        lambda: value_lengths_are_inconsistent(path_or_name_list, prefix),
-    ]
-    if check_duplicates:
-        tests_to_run += [
-            lambda: duplicated_prefix_values(path_or_name_list, prefix)
-        ]
-
-    all_error_messages = []
-
-    for test in tests_to_run:
-
-        error_messages = test()
-
-        for message in error_messages:
-            raise_display_mode(
-                message, display_mode, log
-            )  # check logging here, will log error per file?
-
-        all_error_messages += error_messages
-
-    """
+    error_messages += value_lengths_are_inconsistent(
+        stripped_path_or_names_list, prefix
+    )
 
     return error_messages
+
+
+def prefix_is_duplicate_or_has_bad_values(
+    name: str, prefix: Prefix, path_: Path | None
+) -> List[str]:
+    """
+    TODO
+    """
+    value = utils.get_value_from_key_regexp(name, prefix)
+
+    if len(value) == 0:
+        return [get_missing_prefix_error(name, prefix, path_)]
+
+    if len(value) > 1:
+        return [get_duplicate_prefix_error(name, prefix, path_)]
+
+    try:
+        int(value[0])
+        return []
+    except ValueError:
+        return [get_bad_value_error(name, prefix, path_)]
 
 
 def new_name_duplicates_existing(
@@ -309,7 +285,7 @@ def names_dont_match_templates(
         return []
 
 
-def get_path_and_name(path_or_name) -> Tuple[Optional[Path], str]:
+def get_path_and_name(path_or_name: Path | str) -> Tuple[Optional[Path], str]:
     """ """
     if isinstance(path_or_name, Path):
         return path_or_name, path_or_name.name
@@ -338,22 +314,6 @@ def replace_tags_in_regexp(regexp: str) -> str:
         time_with_key=formatting.format_time(time_regexp),
     )
     return regexp_list[0]
-
-
-def get_names_format(bad_names):
-    """
-    A convenience function to properly format error messages
-    depending on whether there is just 1, or multiple bad names.
-    """
-    assert len(bad_names) != 0, "`bad_names` should not be empty."
-    if len(bad_names) == 1:
-        name_str_format = "name"
-        bad_names_format = bad_names[0]
-    else:
-        name_str_format = "names"
-        bad_names_format = bad_names
-
-    return f"{name_str_format}: {bad_names_format}"
 
 
 def name_begins_with_bad_key(
@@ -462,7 +422,7 @@ def value_lengths_are_inconsistent(
 def datetime_are_iso_format(
     name: str,
     path_: Path | None,
-):  # TODO: check all typing, add docs
+) -> List[str]:
     """ """
     formats = {
         "datetime": "%Y%m%dT%H%M%S",
@@ -472,6 +432,7 @@ def datetime_are_iso_format(
 
     key = next((key for key in formats if key in name), None)
 
+    error_message: List[str]
     if not key:
         error_message = []
 
@@ -604,14 +565,10 @@ def validate_project(
     """
     error_messages = []
 
-    error_messages += check_high_level_project_structure(
-        cfg, local_only, display_mode, log
-    )
+    error_messages += check_high_level_project_structure(cfg, local_only)
 
     if strict_mode:
-        error_messages += check_strict_mode(
-            cfg, top_level_folder, local_only, display_mode, log
-        )
+        error_messages += check_strict_mode(cfg, top_level_folder, local_only)
 
     folder_names = getters.get_all_sub_and_ses_names(
         cfg,
@@ -620,53 +577,19 @@ def validate_project(
     )
 
     # Check subjects
-    #   all_sub_paths = folder_names["sub"]
-
-    #   all_sub_paths, error_messages = strip_invalid_names(
-    #       all_sub_paths, "sub", display_mode, log
-    #   )
-    # # all_error_messages += error_messages
-
     error_messages += validate_list_of_names(
         folder_names["sub"],
         prefix="sub",
-        display_mode=display_mode,
-        log=log,
         name_templates=name_templates,
     )
-
-    #   for sub_path in all_sub_paths:
-    #
-    #       error_messages = new_name_duplicates_existing(
-    #           sub_path.name, all_sub_paths, "sub"
-    #       )
-    #       for message in error_messages:
-    #           raise_display_mode(message, display_mode, log)
-    #       all_error_messages += error_messages
 
     # Check sessions
     all_ses_paths = list(chain(*folder_names["ses"].values()))
 
-    #    all_ses_paths, error_messages = strip_invalid_names(
-    #        all_ses_paths, "ses", display_mode, log
-    #    )
-    #    all_error_messages += error_messages
-
     error_messages += validate_list_of_names(
         all_ses_paths,
         "ses",
-        display_mode=display_mode,
-        log=log,
     )
-
-    #    for ses_paths in folder_names["ses"].values():
-    #        for path_ in ses_paths:
-    #            error_messages = new_name_duplicates_existing(
-    #                path_.name, ses_paths, "ses"
-    #            )
-    #            for message in error_messages:
-    #                raise_display_mode(message, display_mode, log)
-    #            all_error_messages += error_messages
 
     for message in error_messages:
         raise_display_mode(message, display_mode, log)
@@ -683,7 +606,7 @@ def validate_names_against_project(
     display_mode: DisplayMode = "error",
     log: bool = True,
     name_templates: Optional[Dict] = None,
-) -> None:
+) -> List[str]:
     """
     Given a list of subject and (optionally) session names,
     check that these names are formatted consistently with the
@@ -746,31 +669,33 @@ def validate_names_against_project(
     folder_names = getters.get_all_sub_and_ses_names(
         cfg, top_level_folder, local_only
     )
-    # TODO: THESE ARE FOLDER PATHS
-    #    try:
-    #        error_messages += duplicated_prefix_values(sub_names, prefix="sub")
-    #    except:
-    #        breakpoint()
 
     # Check subjects
     error_messages += validate_list_of_names(
         sub_names,
         prefix="sub",
-        display_mode=display_mode,
         name_templates=name_templates,
     )
 
     if folder_names["sub"]:
 
+        valid_sub_names = strip_invalid_names(
+            sub_names, "sub"
+        )  ## TODO: EXPLAIN
         valid_sub_in_project = strip_invalid_names(folder_names["sub"], "sub")
 
-        error_messages += (
-            check_sub_names_value_length_are_consistent_with_project(
-                sub_names, valid_sub_in_project, display_mode, log
+        if any(value_lengths_are_inconsistent(valid_sub_in_project, "sub")):
+            error_messages += [
+                "Cannot check names for inconsistent value lengths "
+                "because the subject value lengths are not consistent "
+                "across the project."
+            ]
+        else:
+            error_messages += value_lengths_are_inconsistent(
+                valid_sub_names + valid_sub_in_project, "sub"
             )
-        )
 
-        for new_sub in sub_names:
+        for new_sub in valid_sub_names:
             error_messages += new_name_duplicates_existing(
                 new_sub, valid_sub_in_project, "sub"
             )
@@ -778,15 +703,9 @@ def validate_names_against_project(
     # Check sessions
     if ses_names is not None and any(ses_names):
 
-        #      try:
-        #          error_messages += duplicated_prefix_values(ses_names, prefix="ses")  maybe we dont care about checking duplicaes in the passed name
-        #      except:
-        #          breakpoint()
-
         error_messages += validate_list_of_names(
             ses_names,
             "ses",
-            display_mode=display_mode,
         )
 
         if folder_names["sub"]:
@@ -795,16 +714,31 @@ def validate_names_against_project(
             for new_sub in sub_names:
                 if new_sub in folder_names["ses"]:
 
-                    valid_ses_in_sub = (
-                        strip_invalid_names(  # strip_uncheckable_names?
-                            folder_names["ses"][new_sub],
-                            "ses",
+                    valid_ses_names = strip_invalid_names(
+                        ses_names, "ses"
+                    )  ## TODO: EXPLAIN
+
+                    # strip_uncheckable_names?
+                    valid_ses_in_sub = strip_invalid_names(
+                        folder_names["ses"][new_sub],
+                        "ses",
+                    )
+
+                    if any(
+                        value_lengths_are_inconsistent(valid_ses_in_sub, "ses")
+                    ):
+                        error_messages += [
+                            f"Cannot check names for inconsistent value lengths "
+                            f"because the session value lengths for subject "
+                            f"{new_sub} are not consistent."
+                        ]
+
+                    else:
+                        error_messages += value_lengths_are_inconsistent(
+                            valid_ses_names + valid_ses_in_sub, "ses"
                         )
-                    )
-                    error_messages += check_ses_names_value_length_are_consistent_with_project(
-                        ses_names, valid_ses_in_sub, new_sub, display_mode, log
-                    )
-                    for new_ses in ses_names:
+
+                    for new_ses in valid_ses_names:
                         error_messages += new_name_duplicates_existing(
                             new_ses, valid_ses_in_sub, "ses"
                         )
@@ -815,7 +749,9 @@ def validate_names_against_project(
     return error_messages
 
 
-def check_high_level_project_structure(cfg, local_only, display_mode, log):
+def check_high_level_project_structure(
+    cfg: Configs, local_only: bool
+) -> List[str]:
     """
     DOC
     """
@@ -863,7 +799,9 @@ def check_high_level_project_structure(cfg, local_only, display_mode, log):
     return error_messages
 
 
-def check_strict_mode(cfg, top_level_folder, local_only, display_mode, log):
+def check_strict_mode(
+    cfg: Configs, top_level_folder: TopLevelFolder, local_only: bool
+) -> List[str]:
     """ """
     if not local_only:
         raise ValueError(
@@ -913,7 +851,8 @@ def check_strict_mode(cfg, top_level_folder, local_only, display_mode, log):
 
             base_folder = cfg.get_base_folder("local", top_level_folder)
 
-            search_results = folders.search_sub_or_ses_level(
+            search_results: List[Path]
+            search_results = folders.search_sub_or_ses_level(  # type: ignore
                 cfg,
                 base_folder,
                 "local",
@@ -936,85 +875,24 @@ def check_strict_mode(cfg, top_level_folder, local_only, display_mode, log):
     return error_messages
 
 
-def check_sub_names_value_length_are_consistent_with_project(  # TODO: delete function
-    sub_names: List[str],
-    valid_sub_in_project: List[str] | List[Path],
-    display_mode: DisplayMode,
-    log: bool,
-) -> List[str]:
-    """
-    Given a list of names we are validating, and a list of
-    all the other names that current exist in the project, check
-    the list of names has consistent value length with all the
-    other names in the project.
-
-    Note this will throw an error if the project odes not have
-    consistent value length as this check will not be possible
-    otherwise.
-    """
-    if any(value_lengths_are_inconsistent(valid_sub_in_project, "sub")):
-        raise_display_mode(
-            "Cannot check names for inconsistent value lengths "
-            "because the subject value lengths are not consistent "
-            "across the project.",
-            display_mode,
-            log,
-        )
-    else:
-        error_message = value_lengths_are_inconsistent(
-            sub_names + valid_sub_in_project, "sub"
-        )
-        if any(error_message):
-            return error_message
-        else:
-            return []  # TODO
-
-
-def check_ses_names_value_length_are_consistent_with_project(  # TODO: Delete function!
-    ses_names: List[str],
-    valid_ses_in_sub: List[str] | List[Path],
-    sub_name: str,
-    display_mode: DisplayMode,
-    log: bool,
-) -> List[str]:
-    """
-    See check_sub_names_value_length_are_consistent_with_project(),
-    this performs the same function for session. Potential to merge
-    with that function, just some minor annoying differences.
-    """
-    if any(value_lengths_are_inconsistent(valid_ses_in_sub, "ses")):
-        raise_display_mode(
-            f"Cannot check names for inconsistent value lengths "
-            f"because the session value lengths for subject "
-            f"{sub_name} are not consistent.",
-            display_mode,
-            log,
-        )
-    else:
-        error_message = value_lengths_are_inconsistent(
-            ses_names + valid_ses_in_sub, "ses"
-        )
-        return error_message
-
-
 @overload
 def strip_invalid_names(
     path_or_names_list: List[Path],
     prefix: Prefix,
-) -> Tuple[List[Path], List[str]]: ...
+) -> List[Path]: ...
 
 
 @overload
 def strip_invalid_names(
     path_or_names_list: List[str],
     prefix: Prefix,
-) -> Tuple[List[str], List[str]]: ...
+) -> List[str]: ...
 
 
 def strip_invalid_names(
     path_or_names_list: List[Path] | List[str],
     prefix: Prefix,
-) -> Tuple[List[Path] | List[str], List[str]]:
+) -> List[Path] | List[str]:
     """ """
     new_list = []
 

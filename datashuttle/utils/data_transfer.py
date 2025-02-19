@@ -216,7 +216,8 @@ class TransferData:
         top-level-folder. Split the output based onto files / folders
         within "sub-" prefixed folders or not.
         """
-        top_level_folders, top_level_files = folders.search_sub_or_ses_level(
+        top_level_folders: List[str]
+        top_level_folders, top_level_files = folders.search_sub_or_ses_level(  # type: ignore
             self.__cfg,
             self.__cfg.get_base_folder(
                 self.__local_or_central, self.__top_level_folder
@@ -242,7 +243,8 @@ class TransferData:
         For the subject, get a list of files / folders that are
         not within "ses-" prefixed folders.
         """
-        sub_level_folders, sub_level_files = folders.search_sub_or_ses_level(
+        sub_level_folders: List[str]
+        sub_level_folders, sub_level_files = folders.search_sub_or_ses_level(  # type: ignore
             self.__cfg,
             self.__cfg.get_base_folder(
                 self.__local_or_central, self.__top_level_folder
@@ -278,10 +280,11 @@ class TransferData:
         For a specific subject and session, get a list of files / folders
         that are not in canonical datashuttle datatype folders.
         """
+        ses_level_folders: List[str]
         (
             ses_level_folders,
             ses_level_filenames,
-        ) = folders.search_sub_or_ses_level(
+        ) = folders.search_sub_or_ses_level(  # type: ignore
             self.__cfg,
             self.__cfg.get_base_folder(
                 self.__local_or_central, self.__top_level_folder
@@ -443,7 +446,8 @@ class TransferData:
             prefix = "ses"
 
         if names_checked in [["all"], [f"all_{prefix}"]]:
-            processed_names = folders.search_sub_or_ses_level(
+            processed_names: List[str]
+            processed_names = folders.search_sub_or_ses_level(  # type: ignore
                 self.__cfg,
                 self.__base_folder,
                 self.__local_or_central,

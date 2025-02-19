@@ -337,9 +337,9 @@ class TestValidation(BaseTest):
             project.validate_project(
                 "rawdata", display_mode="warn", local_only=False
             )
-        assert "VALUE_LENGTH" in str(w[0].message)
+        assert "DUPLICATE_NAME" in str(w[0].message)
         assert "DUPLICATE_NAME" in str(w[1].message)
-        assert "DUPLICATE_NAME" in str(w[2].message)
+        assert "VALUE_LENGTH" in str(w[2].message)
 
         # Finally, check that some bad sessions (ses-01) are caught.
         project.create_folders(
@@ -357,8 +357,8 @@ class TestValidation(BaseTest):
             project.validate_project(
                 "rawdata", display_mode="warn", local_only=False
             )
-        assert "VALUE_LENGTH" in str(w[0].message)
-        assert "VALUE_LENGTH" in str(w[3].message)
+        assert "VALUE_LENGTH" in str(w[2].message)
+        assert "VALUE_LENGTH" in str(w[5].message)
 
     # -------------------------------------------------------------------------
     # Test validate names against project
@@ -397,7 +397,11 @@ class TestValidation(BaseTest):
             validation.validate_names_against_project(
                 project.cfg, "rawdata", ["sab-001"], local_only=True
             )
-        assert "BAD_NAME" in str(e.value)
+        assert (
+            "MISSING_PREFIX: The prefix sub was not found in the name: sab-001"
+            in str(e.value)
+        )
+
         # Now check the bad names don't interfere with
         # inconsistent value lengths or duplicate names.
         project.create_folders("rawdata", "sub-004", "ses-001")
