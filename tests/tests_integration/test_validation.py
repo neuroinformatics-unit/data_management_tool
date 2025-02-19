@@ -55,6 +55,7 @@ class TestValidation(BaseTest):
 
         os.makedirs(project.cfg["local_path"] / "rawdata" / sub_name)
         os.makedirs(project.cfg["local_path"] / "rawdata" / bad_sub_name)
+
         self.check_inconsistent_sub_or_ses_value_length_warning(
             project, "sub", local_only=True
         )
@@ -282,15 +283,17 @@ class TestValidation(BaseTest):
         with pytest.raises(NeuroBlueprintError) as e:
             project.create_folders("rawdata", "sub_100")
 
-        assert "Invalid character in subject or session value: sub" in str(
-            e.value
+        assert (
+            "BAD_VALUE: The value for prefix sub in name sub-sub_100 is not an integer."
+            == str(e.value)
         )
 
         with pytest.raises(NeuroBlueprintError) as e:
             project.create_folders("rawdata", "sub-001", "ses_100")
 
-        assert "Invalid character in subject or session value: ses" in str(
-            e.value
+        assert (
+            "BAD_VALUE: The value for prefix ses in name ses-ses_100 is not an integer."
+            == str(e.value)
         )
 
     # -------------------------------------------------------------------------
@@ -649,7 +652,6 @@ class TestValidation(BaseTest):
             "rawdata",
             "sub-03@TIME@",
         )
-
         with pytest.raises(NeuroBlueprintError):
             # use misspelled time tag, should raise
             project.create_folders(

@@ -71,7 +71,6 @@ def check_and_format_names(
             formatted_names,
             prefix,
             "error",
-            check_duplicates=True,
             name_templates=name_templates,
             log=True,
         )
