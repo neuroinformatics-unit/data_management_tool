@@ -2,10 +2,10 @@ import platform
 from typing import Union
 
 import pytest
-import test_utils
 from tui_base import TuiBase
 
 from datashuttle import DataShuttle
+from datashuttle.configs import canonical_configs
 from datashuttle.tui.app import TuiApp
 from datashuttle.tui.screens.create_folder_settings import (
     CreateFoldersSettingsScreen,
@@ -929,17 +929,21 @@ class TestTuiWidgets(TuiBase):
                 pilot, project_name
             )
 
+            # Turn off all broad datatype checkboxes
             await self.turn_off_all_datatype_checkboxes(pilot)
+            expected_create = canonical_configs.get_tui_config_defaults()[
+                "tui"
+            ]["create_checkboxes_on"]
+            for datatype in ["behav", "ephys", "funcimg", "anat"]:
+                expected_create[datatype]["on"] = False
 
-            # Cycle through all checkboxes, turning on sequentially and
-            # checking all configs are correct.
-            expected_create = test_utils.get_all_folders_used(value=False)
-
+            # Cycle through all checkboxes, turning on sequentially
+            # and checking all configs are correct.
             for datatype in ["behav", "ephys", "funcimg", "anat"]:
                 await self.change_checkbox(
                     pilot, f"#create_{datatype}_checkbox"
                 )
-                expected_create[datatype] = True
+                expected_create[datatype]["on"] = True
                 self.check_datatype_checkboxes(
                     pilot, "create", expected_create
                 )
@@ -949,8 +953,8 @@ class TestTuiWidgets(TuiBase):
             # are still correct.
             await self.change_checkbox(pilot, "#create_ephys_checkbox")
             await self.change_checkbox(pilot, "#create_anat_checkbox")
-            expected_create = test_utils.get_all_folders_used(value=False)
-            expected_create.update({"behav": True, "funcimg": True})
+            expected_create["ephys"]["on"] = False
+            expected_create["anat"]["on"] = False
 
             await self.exit_to_main_menu_and_reeneter_project_manager(
                 pilot, project_name
@@ -966,16 +970,14 @@ class TestTuiWidgets(TuiBase):
                 pilot, "#transfer_custom_radiobutton"
             )
 
+            # Now turn off all transfer checkboxes
             await self.turn_off_all_datatype_checkboxes(pilot, tab="transfer")
 
-            expected_transfer = test_utils.get_all_folders_used(value=False)
-            expected_transfer.update(
-                {
-                    "all": False,
-                    "all_datatype": False,
-                    "all_non_datatype": False,
-                }
-            )
+            expected_transfer = canonical_configs.get_tui_config_defaults()[
+                "tui"
+            ]["transfer_checkboxes_on"]
+            for datatype in ["all", "all_datatype", "all_non_datatype"]:
+                expected_transfer[datatype]["on"] = False
 
             for datatype in [
                 "behav",
@@ -989,7 +991,7 @@ class TestTuiWidgets(TuiBase):
                 await self.change_checkbox(
                     pilot, f"#transfer_{datatype}_checkbox"
                 )
-                expected_transfer[datatype] = True
+                expected_transfer[datatype]["on"] = True
                 self.check_datatype_checkboxes(
                     pilot, "transfer", expected_transfer
                 )

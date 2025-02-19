@@ -9,7 +9,7 @@ TabScreen > TabbedContent {
     height: 100%
 }
 
-/* Create Tab --------------------------------------------------------------------------- */
+/* Create Tab -------------------------------------------------------------------------------- */
 
 #tabscreen_create_tab > Label {
     padding: 1 0 1 1;
@@ -28,10 +28,6 @@ TabScreen > TabbedContent {
 
 #tabscreen_create_tab > Input.-invalid:focus {
     border: tall $error;
-}
-
-#create_folders_settings_button {
-    dock: right;
 }
 
 #create_folders_buttons_horizontal {

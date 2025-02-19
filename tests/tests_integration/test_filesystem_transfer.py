@@ -8,6 +8,7 @@ import test_utils
 from base import BaseTest
 
 from datashuttle.configs import canonical_folders
+from datashuttle.configs.canonical_configs import get_broad_datatypes
 from datashuttle.configs.canonical_tags import tags
 
 
@@ -35,7 +36,7 @@ class TestFileTransfer(BaseTest):
         subs, sessions = test_utils.get_default_sub_sessions_to_test()
 
         test_utils.make_and_check_local_project_folders(
-            project, top_level_folder, subs, sessions, "all"
+            project, top_level_folder, subs, sessions, get_broad_datatypes()
         )
 
         (
@@ -54,7 +55,7 @@ class TestFileTransfer(BaseTest):
             os.path.join(base_path_to_check, top_level_folder),
             subs,
             sessions,
-            test_utils.get_all_folders_used(),
+            test_utils.get_all_broad_folders_used(),
         )
 
     def test_empty_folder_is_not_transferred(self, project):
@@ -96,7 +97,7 @@ class TestFileTransfer(BaseTest):
                 top_level_folder,
                 subs,
                 sessions,
-                "all",
+                get_broad_datatypes(),
             )
 
         (
@@ -134,7 +135,11 @@ class TestFileTransfer(BaseTest):
 
         for top_level_folder in canonical_folders.get_top_level_folders():
             test_utils.make_and_check_local_project_folders(
-                project, top_level_folder, subs, sessions, "all"
+                project,
+                top_level_folder,
+                subs,
+                sessions,
+                get_broad_datatypes(),
             )
         (
             transfer_function,
@@ -151,7 +156,7 @@ class TestFileTransfer(BaseTest):
                 os.path.join(base_path_to_check, top_level_folder),
                 subs,
                 sessions,
-                test_utils.get_all_folders_used(),
+                test_utils.get_all_broad_folders_used(),
             )
 
     @pytest.mark.parametrize(
@@ -179,7 +184,7 @@ class TestFileTransfer(BaseTest):
         """
         subs, sessions = test_utils.get_default_sub_sessions_to_test()
         test_utils.make_and_check_local_project_folders(
-            project, "rawdata", subs, sessions, "all"
+            project, "rawdata", subs, sessions, get_broad_datatypes()
         )
 
         (
@@ -225,7 +230,7 @@ class TestFileTransfer(BaseTest):
         """
         subs, sessions = test_utils.get_default_sub_sessions_to_test()
         test_utils.make_and_check_local_project_folders(
-            project, "rawdata", subs, sessions, "all"
+            project, "rawdata", subs, sessions, get_broad_datatypes()
         )
 
         (
@@ -270,7 +275,7 @@ class TestFileTransfer(BaseTest):
         subs, sessions = test_utils.get_default_sub_sessions_to_test()
 
         test_utils.make_and_check_local_project_folders(
-            project, "rawdata", subs, sessions, "all"
+            project, "rawdata", subs, sessions, get_broad_datatypes()
         )
 
         (
@@ -310,7 +315,7 @@ class TestFileTransfer(BaseTest):
         sessions = [f"ses-01{tags('to')}003_{tags('datetime')}"]
 
         test_utils.make_local_folders_with_files_in(
-            project, "rawdata", subs, sessions, "all"
+            project, "rawdata", subs, sessions, get_broad_datatypes()
         )
 
         (
@@ -357,7 +362,7 @@ class TestFileTransfer(BaseTest):
         ]
 
         test_utils.make_local_folders_with_files_in(
-            project, "rawdata", subs, sessions, "all"
+            project, "rawdata", subs, sessions, get_broad_datatypes()
         )
 
         (

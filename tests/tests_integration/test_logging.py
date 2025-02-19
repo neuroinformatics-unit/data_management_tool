@@ -8,6 +8,7 @@ import pytest
 import test_utils
 
 from datashuttle import DataShuttle
+from datashuttle.configs import canonical_configs
 from datashuttle.configs.canonical_tags import tags
 from datashuttle.utils import ds_logger
 from datashuttle.utils.custom_exceptions import (
@@ -193,7 +194,12 @@ class TestLogging:
 
         ses = ["ses-123", "ses-101"]
 
-        project.create_folders("rawdata", subs, ses, datatype="all")
+        project.create_folders(
+            "rawdata",
+            subs,
+            ses,
+            datatype=canonical_configs.get_broad_datatypes(),
+        )
 
         log = test_utils.read_log_file(project.cfg.logging_path)
 
@@ -262,7 +268,7 @@ class TestLogging:
             "rawdata",
             subs,
             sessions,
-            "all",
+            canonical_configs.get_broad_datatypes(),
         )
 
         (
@@ -316,7 +322,7 @@ class TestLogging:
             "rawdata",
             subs=["sub-001"],
             sessions=["ses-001"],
-            datatype="all",
+            datatype=canonical_configs.get_broad_datatypes(),
         )
 
         test_utils.handle_upload_or_download(

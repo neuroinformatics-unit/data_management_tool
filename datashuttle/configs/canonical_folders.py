@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, List, Tuple
 if TYPE_CHECKING:
     from datashuttle.utils.custom_types import TopLevelFolder
 
+from datashuttle.configs import canonical_configs
 from datashuttle.utils.folder_class import Folder
 
 
@@ -14,17 +15,13 @@ def get_datatype_folders() -> dict:
     This function holds the canonical folders
     managed by datashuttle.
 
-    Parameters
-    ----------
-
-    cfg : datashuttle configs dict
-
-    Other Parameters
-    ----------------
-
-    When adding a new folder, the
-    key should be the canonical key used to refer
-    to the datatype in datashuttle and SWC-BIDs.
+    Notes
+    -----
+    This organisation is somewhat legacy, and created to allow
+    flexibility with the folder name vs. canonical name, and
+    subject or session level. For now, canonical names must be
+    used, and all datatypes are at session level. But this is
+    kept in case this changes.
 
     The value is a Folder() class instance with
     the required fields
@@ -37,22 +34,8 @@ def get_datatype_folders() -> dict:
     level : "sub" or "ses", level to make the folder at.
     """
     return {
-        "ephys": Folder(
-            name="ephys",
-            level="ses",
-        ),
-        "behav": Folder(
-            name="behav",
-            level="ses",
-        ),
-        "funcimg": Folder(
-            name="funcimg",
-            level="ses",
-        ),
-        "anat": Folder(
-            name="anat",
-            level="ses",
-        ),
+        datatype: Folder(name=datatype, level="ses")
+        for datatype in canonical_configs.get_datatypes()
     }
 
 

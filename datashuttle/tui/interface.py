@@ -352,7 +352,7 @@ class Interface:
 
         return self.tui_settings
 
-    def update_tui_settings(
+    def save_tui_settings(
         self, value: Any, key: str, key_2: Optional[str] = None
     ) -> None:
         """

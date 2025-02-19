@@ -2,7 +2,7 @@ import pytest_asyncio
 import test_utils
 from textual.widgets._tabbed_content import ContentTab
 
-from datashuttle.configs import canonical_folders
+from datashuttle.configs import canonical_configs
 from datashuttle.tui.screens.project_manager import ProjectManagerScreen
 from datashuttle.tui.screens.project_selector import ProjectSelectorScreen
 
@@ -213,7 +213,7 @@ class TuiBase:
         """
         assert tab in ["create", "transfer"]
 
-        checkbox_names = list(canonical_folders.get_datatype_folders().keys())
+        checkbox_names = canonical_configs.get_broad_datatypes()
         if tab == "create":
             checkboxes_id = "#create_folders_datatype_checkboxes"
         else:
@@ -228,7 +228,8 @@ class TuiBase:
         datatype_config = pilot.app.screen.query_one(
             checkboxes_id
         ).datatype_config
-        assert all(val is False for val in datatype_config.values())
+
+        assert all(val["on"] is False for val in datatype_config.values())
 
     async def exit_to_main_menu_and_reeneter_project_manager(
         self, pilot, project_name
