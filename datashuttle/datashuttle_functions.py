@@ -55,7 +55,7 @@ def quick_validate_project(
     # at least one top-level folder
     if not project_path.is_dir():
         raise FileNotFoundError(
-            f"No file or folder found at `project_path`: {project_path}"
+            f"Cannot perform validation. No file or folder found at `project_path`: {project_path}"
         )
     if (
         not (project_path / "rawdata").is_dir()

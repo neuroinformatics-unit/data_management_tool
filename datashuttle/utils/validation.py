@@ -655,7 +655,7 @@ def validate_names_against_project(
     if folder_names["sub"]:
 
         valid_sub_in_project, _ = strip_invalid_names(
-            folder_names["sub"], "sub", display_mode, log
+            folder_names["sub"], "sub", display_mode, log, raise_at_all=False
         )
 
         validate_list_of_names(
@@ -694,7 +694,11 @@ def validate_names_against_project(
             if new_sub in folder_names["ses"]:
 
                 valid_ses_in_sub, _ = strip_invalid_names(
-                    folder_names["ses"][new_sub], "ses", display_mode, log
+                    folder_names["ses"][new_sub],
+                    "ses",
+                    display_mode,
+                    log,
+                    raise_at_all=False,
                 )
                 check_ses_names_value_length_are_consistent_with_project(
                     ses_names, valid_ses_in_sub, new_sub, display_mode, log
@@ -716,9 +720,11 @@ def check_high_level_project_structure(cfg, local_only, display_mode, log):
     # actually this will raise correctly for the quick valid.ate TEst!
     error_messages = []
     error_messages += names_include_special_characters(cfg["local_path"].name)
-    error_messages += names_include_special_characters(
-        cfg["central_path"].name
-    )
+
+    if cfg["central_path"]:
+        error_messages += names_include_special_characters(
+            cfg["central_path"].name
+        )
     for message in error_messages:
         raise_display_mode(message, display_mode, log)
 
@@ -826,10 +832,10 @@ def check_strict_mode(cfg, top_level_folder, local_only, display_mode, log):
                     )
                     error_messages.append(message)
 
-        for message in error_messages:
-            raise_display_mode(message, display_mode, log)
+    for message in error_messages:
+        raise_display_mode(message, display_mode, log)
 
-        return error_messages
+    return error_messages
 
 
 def check_sub_names_value_length_are_consistent_with_project(
@@ -898,6 +904,7 @@ def strip_invalid_names(
     prefix: Prefix,
     display_mode,
     log,
+    raise_at_all=True,
 ) -> Tuple[List[Path], List[str]]: ...
 
 
@@ -907,6 +914,7 @@ def strip_invalid_names(
     prefix: Prefix,
     display_mode,
     log,
+    raise_at_all=True,
 ) -> Tuple[List[str], List[str]]: ...
 
 
@@ -915,6 +923,7 @@ def strip_invalid_names(
     prefix: Prefix,
     display_mode,
     log,
+    raise_at_all=True,  # TODO: stupid, refactor, but needed for the bad names against project case
 ) -> Tuple[List[Path] | List[str], List[str]]:
     """ """
     error_messages = []
@@ -929,9 +938,10 @@ def strip_invalid_names(
                 [name], prefix, return_as_int=True
             )[0]
         except NeuroBlueprintError:
-            message = get_name_error(name, prefix, path_)
-            error_messages.append(message)
-            raise_display_mode(message, display_mode, log)
+            if raise_at_all:
+                message = get_name_error(name, prefix, path_)
+                error_messages.append(message)
+                raise_display_mode(message, display_mode, log)
             continue
 
         if path_:
