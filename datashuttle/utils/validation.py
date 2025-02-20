@@ -91,7 +91,10 @@ def get_missing_top_level_folder_error(path_):
 
 
 def get_duplicate_name_error(new_name, exist_name, exist_path):
-    return f"DUPLICATE_NAME: The prefix for {new_name} duplicates the name : {exist_name} at path: {exist_path}"
+    return handle_path(
+        f"DUPLICATE_NAME: The prefix for {new_name} duplicates the name: {exist_name}.",
+        exist_path,
+    )
 
 
 def get_datatype_error(datatype_name, path_):
@@ -195,7 +198,7 @@ def prefix_is_duplicate_or_has_bad_values(
     """
     TODO
     """
-    value = utils.get_value_from_key_regexp(name, prefix)
+    value = re.findall(f"{prefix}(.*?)(?=_|$)", name)
 
     if len(value) == 0:
         return [get_missing_prefix_error(name, prefix, path_)]
@@ -374,9 +377,11 @@ def dashes_and_underscore_alternate_incorrectly(
     )
 
     if (
-        (dashes_underscores[0] != 1)
+        not any(dashes_underscores)
+        or dashes_underscores[0] != 1  # first must be -
+        or dashes_underscores[-1] != 1  # last must be -
         or underscore_dash_not_interleaved
-        or (name[-1] in discrim.keys())
+        or (name[-1] in discrim.keys())  # name cannot end with - or _
     ):
         return [get_name_format_error(name, path_)]
     else:
@@ -771,6 +776,7 @@ def validate_names_against_project(
     return error_messages
 
 
+# TODO: FIXUP!
 def check_high_level_project_structure(
     cfg: Configs, local_only: bool
 ) -> List[str]:

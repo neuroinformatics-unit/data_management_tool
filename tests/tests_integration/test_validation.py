@@ -14,7 +14,7 @@ from datashuttle.utils.custom_exceptions import NeuroBlueprintError
 
 # TODO: extend back tests to include some of the sub / ses names etc.
 # name templates on sub, is this checked?
-# add tests for inconssistent val lengths, FOR BOTH
+# add tests for inconsistent val lengths, FOR BOTH
 
 
 class TestValidation(BaseTest):
@@ -59,7 +59,7 @@ class TestValidation(BaseTest):
         os.makedirs(project.cfg["local_path"] / "rawdata" / bad_sub_name)
 
         self.check_inconsistent_sub_or_ses_value_length_warning(
-            project, "sub", local_only=True
+            project, local_only=True
         )
 
         # Now, have conflicting subject names,
@@ -72,12 +72,12 @@ class TestValidation(BaseTest):
         project.update_config_file(central_path=new_central_path)
         os.makedirs(project.cfg["central_path"] / "rawdata" / bad_sub_name)
         shutil.rmtree(project.cfg["local_path"] / "rawdata" / bad_sub_name)
-        self.check_inconsistent_sub_or_ses_value_length_warning(project, "sub")
+        self.check_inconsistent_sub_or_ses_value_length_warning(project)
 
         # Have conflicting subject names both in central.
         shutil.rmtree(project.cfg["local_path"] / "rawdata" / sub_name)
         os.makedirs(project.cfg["central_path"] / "rawdata" / sub_name)
-        self.check_inconsistent_sub_or_ses_value_length_warning(project, "sub")
+        self.check_inconsistent_sub_or_ses_value_length_warning(project)
 
     @pytest.mark.parametrize(
         "ses_name",
@@ -102,7 +102,6 @@ class TestValidation(BaseTest):
         `test_warn_on_inconsistent_sub_value_lengths()` but operates at the
         session level. This is extreme code duplication, but
         factoring the main logic out got very messy and hard to follow.
-
         """
         ses_name = formatting.format_names([ses_name], "ses")[0]
         bad_ses_name = formatting.format_names([bad_ses_name], "ses")[0]
@@ -116,7 +115,7 @@ class TestValidation(BaseTest):
             project.cfg["local_path"] / "rawdata" / "sub-002" / bad_ses_name
         )
         self.check_inconsistent_sub_or_ses_value_length_warning(
-            project, "ses", local_only=True
+            project, local_only=True
         )
 
         # Now, have conflicting session names (in different subject
@@ -132,14 +131,14 @@ class TestValidation(BaseTest):
             project.cfg["central_path"] / "rawdata" / "sub-001" / bad_ses_name
         )
         shutil.rmtree(project.cfg["local_path"] / "rawdata" / "sub-002")
-        self.check_inconsistent_sub_or_ses_value_length_warning(project, "ses")
+        self.check_inconsistent_sub_or_ses_value_length_warning(project)
 
         # Test the case where conflicting session names are both on central.
         shutil.rmtree(project.cfg["local_path"] / "rawdata" / "sub-001")
         os.makedirs(
             project.cfg["central_path"] / "rawdata" / "sub-001" / ses_name
         )
-        self.check_inconsistent_sub_or_ses_value_length_warning(project, "ses")
+        self.check_inconsistent_sub_or_ses_value_length_warning(project)
 
     def test_warn_on_inconsistent_sub_and_ses_value_lengths(self, project):
         """
@@ -153,14 +152,14 @@ class TestValidation(BaseTest):
             project.cfg["local_path"] / "rawdata" / "sub-03" / "ses-002"
         )
         self.check_inconsistent_sub_or_ses_value_length_warning(
-            project, "sub", local_only=True
+            project, local_only=True
         )
         self.check_inconsistent_sub_or_ses_value_length_warning(
-            project, "ses", warn_idx=1, local_only=True
+            project, warn_idx=1, local_only=True
         )
 
     def check_inconsistent_sub_or_ses_value_length_warning(
-        self, project, prefix, warn_idx=0, local_only=False
+        self, project, warn_idx=0, local_only=False
     ):
         """"""
         with pytest.warns(UserWarning) as w:
@@ -272,6 +271,21 @@ class TestValidation(BaseTest):
             )
         assert "DUPLICATE_NAME" in str(e.value)
 
+    def test_duplicate_ses_across_subjects(self, project):
+        """
+        Quick test that duplicate session folders only raise
+        an error when they are in the same subject.
+        """
+        project.create_folders("rawdata", "sub-001", "ses-001")
+        project.create_folders("rawdata", "sub-002", "ses-001_@DATE@")
+
+        project.validate_project(
+            "rawdata", display_mode="error", local_only=True
+        )
+
+        with pytest.raises(NeuroBlueprintError):
+            project.create_folders("rawdata", "sub-001", "ses-001_@DATE@")
+
     # -------------------------------------------------------------------------
     # Bad underscore order
     # -------------------------------------------------------------------------
@@ -368,21 +382,6 @@ class TestValidation(BaseTest):
             in str(w[3].message)
         )
 
-    def test_duplicate_ses_across_subjects(self, project):
-        """
-        Quick test that duplicate session folders only raise
-        an error when they are in the same subject.
-        """
-        project.create_folders("rawdata", "sub-001", "ses-001")
-        project.create_folders("rawdata", "sub-002", "ses-001_@DATE@")
-
-        project.validate_project(
-            "rawdata", display_mode="error", local_only=True
-        )
-
-        with pytest.raises(NeuroBlueprintError):
-            project.create_folders("rawdata", "sub-001", "ses-001_@DATE@")
-
     # -------------------------------------------------------------------------
     # Test validate names against project
     # -------------------------------------------------------------------------
@@ -458,7 +457,7 @@ class TestValidation(BaseTest):
                 project.cfg, "rawdata", ["sub-004_id-123"], local_only=True
             )
         assert (
-            "DUPLICATE_NAME: The prefix for sub-004_id-123 duplicates the name : sub-004"
+            "DUPLICATE_NAME: The prefix for sub-004_id-123 duplicates the name: sub-004"
             in str(e.value)
         )
 
@@ -467,11 +466,10 @@ class TestValidation(BaseTest):
                 project.cfg,
                 "rawdata",
                 ["sub-004"],
-                ["ses-001_date-121212"],
                 local_only=True,
             )
         assert (
-            "DUPLICATE_NAME: The prefix for ses-001_date-121212 duplicates the name : ses-001"
+            "DUPLICATE_NAME: The prefix for ses-001_date-121212 duplicates the name: ses-001"
             in str(e.value)
         )
 
@@ -757,9 +755,9 @@ class TestValidation(BaseTest):
             ["ephys", "behav"],
         )
 
-        #      project.validate_project(
-        #          top_level_folder, "error", local_only=True, strict_mode=True
-        #      )
+        project.validate_project(
+            top_level_folder, "error", local_only=True, strict_mode=True
+        )
 
         os.makedirs(
             project.cfg["local_path"] / top_level_folder / "bad_sub_name"
