@@ -1211,6 +1211,14 @@ class DataShuttle:
         local_only : bool
             If ``True``, only the local project is validated. Otherwise, both
             local and central projects are validated.
+
+        strict_mode: bool
+            If `True`, only allow NeuroBlueprint-formatted folders to exist in
+            the project. By default, non-NeuroBlueprint folders (e.g. a folder
+            called 'my_stuff' in the 'rawdata') are allowed, and only folders
+            starting with sub- or ses- prefix are checked. In `Strict Mode`,
+            any folder not prefixed with sub-, ses- or a valid datatype will
+            raise a validation issue.
         """
         self._start_log(
             "validate-project",

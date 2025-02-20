@@ -291,7 +291,7 @@ def get_existing_project_paths() -> List[Path]:
     return existing_project_paths
 
 
-def get_all_sub_and_ses_names(
+def get_all_sub_and_ses_paths(
     cfg: Configs,
     top_level_folder: TopLevelFolder,
     local_only: bool,

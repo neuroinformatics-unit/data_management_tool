@@ -115,6 +115,7 @@ def validate_list_of_names(
     path_or_name_list: List[Path] | List[str],
     prefix: Prefix,
     name_templates: Optional[Dict] = None,
+    check_value_lengths: bool = True,
 ) -> List[str]:
     """
     Validate a list of subject or session names, ensuring
@@ -133,10 +134,8 @@ def validate_list_of_names(
         If an invalid case is found, whether to raise error or warning
 
     check_duplicates : bool
-        The function `duplicated_prefix_values()` performs a quick check
-        for duplicate sub / ses values in the names. However, this will
-        raise on any duplicate, see `new_name_duplicates_existing()`
-        for a more flexible function used during new folder creation.
+        If `True`, check that the prefix-<value> value lengths
+        are consistent across the passed list.
 
     log: bool
         If `True`, output will also be logged to "datashuttle" logger.
@@ -170,7 +169,7 @@ def validate_list_of_names(
         )
 
     # both of these are O(n^2)
-    stripped_path_or_names_list = strip_invalid_names(
+    stripped_path_or_names_list = strip_uncheckable_names(
         path_or_name_list, prefix
     )
 
@@ -182,9 +181,10 @@ def validate_list_of_names(
             name, stripped_path_or_names_list, prefix
         )
 
-    error_messages += value_lengths_are_inconsistent(
-        stripped_path_or_names_list, prefix
-    )
+    if check_value_lengths:
+        error_messages += value_lengths_are_inconsistent(
+            stripped_path_or_names_list, prefix
+        )
 
     return error_messages
 
@@ -562,35 +562,59 @@ def validate_project(
 
     log : bool
         If `True`, errors or warnings are logged to "datashuttle" logger.
+
+    name_templates: Optional[Dict]
+        A `name_template` dictionary to validate against. See `set_name_templates()`.
+
+    strict_mode: bool
+        If `True`, only allow NeuroBlueprint-formatted folders to exist in
+        the project. By default, non-NeuroBlueprint folders (e.g. a folder
+        called 'my_stuff' in the 'rawdata') are allowed, and only folders
+        starting with sub- or ses- prefix are checked. In `Strict Mode`,
+        any folder not prefixed with sub-, ses- or a valid datatype will
+        raise a validation issue.
     """
     error_messages = []
 
+    # Check basic things about the project (e.g. contains a top-level folder)
     error_messages += check_high_level_project_structure(cfg, local_only)
 
     if strict_mode:
         error_messages += check_strict_mode(cfg, top_level_folder, local_only)
 
-    folder_names = getters.get_all_sub_and_ses_names(
+    # Get a list of paths to every sub- or ses- folder
+    folder_paths = getters.get_all_sub_and_ses_paths(
         cfg,
         top_level_folder,
         local_only,
     )
 
-    # Check subjects
+    # Check subject folders are valid
     error_messages += validate_list_of_names(
-        folder_names["sub"],
+        folder_paths["sub"],
         prefix="sub",
         name_templates=name_templates,
     )
 
-    # Check sessions
-    all_ses_paths = list(chain(*folder_names["ses"].values()))
+    # Sessions a little more complicated. We need to check
+    # for session duplicates separately for each subject.
+    # However, we need to check inconsistent ses-<value> lengths
+    # across the entire project.
 
-    error_messages += validate_list_of_names(
-        all_ses_paths,
-        "ses",
-    )
+    # Check all names as well as duplicates per-subject
+    for ses_paths in folder_paths["ses"].values():
 
+        error_messages += validate_list_of_names(
+            ses_paths, "ses", check_value_lengths=False
+        )
+
+    # Next, check inconsistent value lengths across the entire project
+    all_ses_paths = list(chain(*folder_paths["ses"].values()))
+
+    stripped_ses_paths = strip_uncheckable_names(all_ses_paths, "ses")
+    error_messages += value_lengths_are_inconsistent(stripped_ses_paths, "ses")
+
+    # Display the collected errors using the selected method
     for message in error_messages:
         raise_display_mode(message, display_mode, log)
 
@@ -610,23 +634,11 @@ def validate_names_against_project(
     """
     Given a list of subject and (optionally) session names,
     check that these names are formatted consistently with the
-    rest of the project. Unfortunately this function has become
-    quite complex due to the need to only validate the passed
-    list of subject / session names while ignoring validation errors
-    that may already exist in the project.
+    rest of the project. Used for creating folders.
 
-    The passed list of names is first validated in `validate_list_of_names()`
-    without reference to the existing project.
-
-    Next, checks for inconsistent length of sub or ses values are checked.
-    This cannot be run if there are inconsistent values within the project
-    itself, which will throw an error in this case. Only valid sub / ses
-    names within the project are checked.
-
-    Finally, checks for duplicate subjects / sessions are performed. For subjects,
-    duplicates are checked for project-wide. For sessions, duplicates are
-    checked for within the corresponding folders. This assumes that
-    the passed `ses_names` will be created in all passed `sub_names`.
+    Unfortunately this is quite fiddly, as it is important to only
+    validate the passed list of subject / session names while ignoring
+    validation errors that may already exist in the project.
 
     Parameters
     ----------
@@ -658,32 +670,33 @@ def validate_names_against_project(
     log : bool
         If `True`, errors or warnings are logged to "datashuttle" logger.
 
-    TODO
-    ----
-    This function is now quite confusing, and in general the validation
-    needs optimisation are there are frequent looping over the same
-    list under different circumstances. See issue #355
     """
     error_messages = []
 
-    folder_names = getters.get_all_sub_and_ses_names(
-        cfg, top_level_folder, local_only
-    )
-
-    # Check subjects
+    # First, check the list of passed names are valid
     error_messages += validate_list_of_names(
         sub_names,
         prefix="sub",
         name_templates=name_templates,
     )
 
-    if folder_names["sub"]:
+    # Next, get all of the subjects and sessions from
+    # the project (local and possibly central)
+    folder_paths = getters.get_all_sub_and_ses_paths(
+        cfg, top_level_folder, local_only
+    )
 
-        valid_sub_names = strip_invalid_names(
-            sub_names, "sub"
-        )  ## TODO: EXPLAIN
-        valid_sub_in_project = strip_invalid_names(folder_names["sub"], "sub")
+    if folder_paths["sub"]:
 
+        # Strip any totally invalid names which we can't extract
+        # the sub integer value for the following checks
+        valid_sub_names = strip_uncheckable_names(sub_names, "sub")
+        valid_sub_in_project = strip_uncheckable_names(
+            folder_paths["sub"], "sub"
+        )
+
+        # Check list of passed names against all the names in the project
+        # for value-length violations and duplicates.
         if any(value_lengths_are_inconsistent(valid_sub_in_project, "sub")):
             error_messages += [
                 "Cannot check names for inconsistent value lengths "
@@ -700,49 +713,58 @@ def validate_names_against_project(
                 new_sub, valid_sub_in_project, "sub"
             )
 
-    # Check sessions
+    # Now we need to check the sessions.
     if ses_names is not None and any(ses_names):
 
+        # First, validate the list of passed session names
         error_messages += validate_list_of_names(
             ses_names,
             "ses",
         )
 
-        if folder_names["sub"]:
-            # For all the subjects, check that the ses_names are valid
-            # for all sessions currently within those subjects.
+        if folder_paths["sub"]:
+
+            # Next, we need to check that the passed session names
+            # do not duplicate existing session names and
+            # that do not create inconsistent ses-<value> lengths across the project.
+            valid_ses_names = strip_uncheckable_names(ses_names, "ses")
+
+            # First, we need to check for duplicate session names
+            # for each subject separately, as duplicate session names
+            # are allowed across different subjects (but not within a single sub).
             for new_sub in sub_names:
-                if new_sub in folder_names["ses"]:
+                if new_sub in folder_paths["ses"]:
 
-                    valid_ses_names = strip_invalid_names(
-                        ses_names, "ses"
-                    )  ## TODO: EXPLAIN
-
-                    # strip_uncheckable_names?
-                    valid_ses_in_sub = strip_invalid_names(
-                        folder_names["ses"][new_sub],
+                    valid_ses_in_sub = strip_uncheckable_names(
+                        folder_paths["ses"][new_sub],
                         "ses",
                     )
-
-                    if any(
-                        value_lengths_are_inconsistent(valid_ses_in_sub, "ses")
-                    ):
-                        error_messages += [
-                            f"Cannot check names for inconsistent value lengths "
-                            f"because the session value lengths for subject "
-                            f"{new_sub} are not consistent."
-                        ]
-
-                    else:
-                        error_messages += value_lengths_are_inconsistent(
-                            valid_ses_names + valid_ses_in_sub, "ses"
-                        )
-
                     for new_ses in valid_ses_names:
                         error_messages += new_name_duplicates_existing(
                             new_ses, valid_ses_in_sub, "ses"
                         )
+            # Next, we need to check for inconsistent session value lengths
+            # across the entire project at once (because inconsistent
+            # ses-<value> lengths are not allowed across different subs).
+            all_ses_paths = list(chain(*folder_paths["ses"].values()))
 
+            all_valid_ses = strip_uncheckable_names(
+                all_ses_paths,
+                "ses",
+            )
+
+            if any(value_lengths_are_inconsistent(all_valid_ses, "ses")):
+                error_messages += [
+                    "Cannot check names for inconsistent value lengths "
+                    "because the session value lengths for this project "
+                    "are not consistent."
+                ]
+            else:
+                error_messages += value_lengths_are_inconsistent(
+                    valid_ses_names + all_valid_ses, "ses"
+                )
+
+    # Display the collected errors using the selected method
     for message in error_messages:
         raise_display_mode(message, display_mode, log)
 
@@ -876,20 +898,20 @@ def check_strict_mode(
 
 
 @overload
-def strip_invalid_names(
+def strip_uncheckable_names(
     path_or_names_list: List[Path],
     prefix: Prefix,
 ) -> List[Path]: ...
 
 
 @overload
-def strip_invalid_names(
+def strip_uncheckable_names(
     path_or_names_list: List[str],
     prefix: Prefix,
 ) -> List[str]: ...
 
 
-def strip_invalid_names(
+def strip_uncheckable_names(
     path_or_names_list: List[Path] | List[str],
     prefix: Prefix,
 ) -> List[Path] | List[str]:

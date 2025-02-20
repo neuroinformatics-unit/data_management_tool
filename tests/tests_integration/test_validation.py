@@ -13,6 +13,8 @@ from datashuttle.utils.custom_exceptions import NeuroBlueprintError
 # -----------------------------------------------------------------------------
 
 # TODO: extend back tests to include some of the sub / ses names etc.
+# name templates on sub, is this checked?
+# add tests for inconssistent val lengths, FOR BOTH
 
 
 class TestValidation(BaseTest):
@@ -223,7 +225,7 @@ class TestValidation(BaseTest):
         with pytest.raises(NeuroBlueprintError) as e:
             project.create_folders("rawdata", "sub-1", "ses-003")
 
-        assert "VALUE_LENGTH" in str(e.value)
+        assert "DUPLICATE_NAME" in str(e.value)
 
     def test_duplicate_sub_when_creating_session(self, project):
         """
@@ -357,8 +359,29 @@ class TestValidation(BaseTest):
             project.validate_project(
                 "rawdata", display_mode="warn", local_only=False
             )
-        assert "VALUE_LENGTH" in str(w[2].message)
-        assert "VALUE_LENGTH" in str(w[5].message)
+        assert (
+            "VALUE_LENGTH: Inconsistent value lengths for the prefix: sub"
+            in str(w[2].message)
+        )
+        assert (
+            "VALUE_LENGTH: Inconsistent value lengths for the prefix: ses"
+            in str(w[3].message)
+        )
+
+    def test_duplicate_ses_across_subjects(self, project):
+        """
+        Quick test that duplicate session folders only raise
+        an error when they are in the same subject.
+        """
+        project.create_folders("rawdata", "sub-001", "ses-001")
+        project.create_folders("rawdata", "sub-002", "ses-001_@DATE@")
+
+        project.validate_project(
+            "rawdata", display_mode="error", local_only=True
+        )
+
+        with pytest.raises(NeuroBlueprintError):
+            project.create_folders("rawdata", "sub-001", "ses-001_@DATE@")
 
     # -------------------------------------------------------------------------
     # Test validate names against project
