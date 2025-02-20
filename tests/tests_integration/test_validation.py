@@ -386,6 +386,62 @@ class TestValidation(BaseTest):
             w[3].message
         )  # no path in VALUE_LENGTH errors
 
+    @pytest.mark.parametrize("prefix", ["sub", "ses"])
+    def test_validate_project_returned_list(self, project, prefix):
+        """ """
+        bad_names = [
+            f"{prefix}-001",
+            f"{prefix}-001_@DATE@",
+            f"{prefix}_002_id_1",
+            f"{prefix}-02",
+            f"{prefix}-002_date-1",
+        ]
+
+        if prefix == "sub":
+            project.create_folders(
+                "rawdata", bad_names, bypass_validation=True
+            )
+        else:
+            project.create_folders(
+                "rawdata", "sub-001", bad_names, bypass_validation=True
+            )
+
+        error_messages = project.validate_project(
+            "rawdata", "warn", local_only=True
+        )
+        concat_error = "".join(error_messages)
+
+        assert "DATETIME" in concat_error
+        assert "BAD_VALUE" in concat_error
+        assert "DUPLICATE_NAME" in concat_error
+        assert "VALUE_LENGTH" in concat_error
+
+    def test_output_paths_are_valid(self, project):
+        """ """
+        sub_name = "sub-001x"
+        ses_name = "ses-001x"
+        project.create_folders(
+            "rawdata", sub_name, ses_name, bypass_validation=True
+        )
+
+        error_messages = project.validate_project(
+            "rawdata", "warn", local_only=True
+        )
+
+        sub_path = error_messages[0].split("Path: ")[-1]
+        ses_path = error_messages[1].split("Path: ")[-1]
+
+        assert (
+            sub_path
+            == (project.cfg["local_path"] / "rawdata" / sub_name).as_posix()
+        )
+        assert (
+            ses_path
+            == (
+                project.cfg["local_path"] / "rawdata" / sub_name / ses_name
+            ).as_posix()
+        )
+
     # -------------------------------------------------------------------------
     # Test validate names against project
     # -------------------------------------------------------------------------
@@ -465,18 +521,19 @@ class TestValidation(BaseTest):
             in str(e.value)
         )
 
-        breakpoint()
         with pytest.raises(NeuroBlueprintError) as e:
             validation.validate_names_against_project(
                 project.cfg,
                 "rawdata",
                 ["sub-004"],
+                ["ses-001_date-121212"],
                 local_only=True,
             )
         assert (
             "DUPLICATE_NAME: The prefix for ses-001_date-121212 duplicates the name: ses-001"
             in str(e.value)
         )
+        assert "Path" in str(e.value)  # quick check Path is included
 
         # Finally make folders within the existing project that have
         # inconsistent value lengths, and check the correct error is raised.
@@ -516,9 +573,6 @@ class TestValidation(BaseTest):
             "Cannot check names for inconsistent value lengths because the subject value"
             in str(e.value)
         )
-
-        # Just a cursory check the path is included in the output
-        assert "Path" in str(e.value)
 
     def test_validate_names_against_project_interactions(self, project):
         """

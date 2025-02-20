@@ -635,7 +635,7 @@ def validate_names_against_project(
     display_mode: DisplayMode = "error",
     log: bool = True,
     name_templates: Optional[Dict] = None,
-) -> List[str]:
+) -> None:
     """
     Given a list of subject and (optionally) session names,
     check that these names are formatted consistently with the
@@ -772,8 +772,6 @@ def validate_names_against_project(
     # Display the collected errors using the selected method
     for message in error_messages:
         raise_display_mode(message, display_mode, log)
-
-    return error_messages
 
 
 # TODO: FIXUP!

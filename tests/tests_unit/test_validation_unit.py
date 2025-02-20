@@ -264,3 +264,44 @@ class TestValidationUnit:
         output = validation.handle_path("message", Path("some/path"))
 
         assert output == "message Path: some/path"
+
+    @pytest.mark.parametrize("prefix", ["sub", "ses"])
+    def test_datetime_iso_format(self, prefix):
+
+        # Test dates
+        error_messages = validation.validate_list_of_names(
+            [
+                f"{prefix}-001_date-20240101",  # OK
+                f"{prefix}-002_date-123",  # wrong format
+                f"{prefix}-003_date-20241301",  # bad month
+                f"{prefix}-004_date-20241240",  # bad day
+            ],
+            prefix,
+        )
+        assert len(error_messages) == 3
+        assert all("DATETIME" in message for message in error_messages)
+
+        # Test Times
+        error_messages = validation.validate_list_of_names(
+            [
+                f"{prefix}-001_time-010101",  # OK
+                f"{prefix}-002_time-1122123",  # wrong format
+                f"{prefix}-003_time-250101",  # bad hour
+            ],
+            prefix,
+        )
+        assert len(error_messages) == 2
+        assert all("DATETIME" in message for message in error_messages)
+
+        # Test Datetime
+        error_messages = validation.validate_list_of_names(
+            [
+                f"{prefix}-001_datetime-20240101T010101",  # OK
+                f"{prefix}-002_datetime-123T123",  # wrong format
+                f"{prefix}-003_datetime-20241301T010101",  # bad date
+                f"{prefix}-004_datetime-20240101250101",  # bad time
+            ],
+            prefix,
+        )
+        assert len(error_messages) == 3
+        assert all("DATETIME" in message for message in error_messages)
