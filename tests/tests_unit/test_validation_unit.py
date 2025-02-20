@@ -253,3 +253,14 @@ class TestValidationUnit:
             fixed_datetime_regexp
             == r"ses-.?.?.?_datetime-\d\d\d\d\d\d\d\dT\d\d\d\d\d\d_some-.?.?tag"
         )
+
+    def test_handle_path(self):
+
+        output = validation.handle_path("message", None)
+        assert output == "message"
+
+        from pathlib import Path
+
+        output = validation.handle_path("message", Path("some/path"))
+
+        assert output == "message Path: some/path"

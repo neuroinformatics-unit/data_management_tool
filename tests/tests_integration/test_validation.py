@@ -342,6 +342,7 @@ class TestValidation(BaseTest):
                 "rawdata", display_mode="error", local_only=False
             )
         assert "DUPLICATE_NAME" in str(e.value)
+        assert "Path" in str(e.value)  # cursory check Path is returned
 
         # Now check warnings are shown when there are multiple validation
         # issues across local and central.
@@ -381,6 +382,9 @@ class TestValidation(BaseTest):
             "VALUE_LENGTH: Inconsistent value lengths for the prefix: ses"
             in str(w[3].message)
         )
+        assert "Path" not in str(
+            w[3].message
+        )  # no path in VALUE_LENGTH errors
 
     # -------------------------------------------------------------------------
     # Test validate names against project
@@ -461,6 +465,7 @@ class TestValidation(BaseTest):
             in str(e.value)
         )
 
+        breakpoint()
         with pytest.raises(NeuroBlueprintError) as e:
             validation.validate_names_against_project(
                 project.cfg,
@@ -511,6 +516,9 @@ class TestValidation(BaseTest):
             "Cannot check names for inconsistent value lengths because the subject value"
             in str(e.value)
         )
+
+        # Just a cursory check the path is included in the output
+        assert "Path" in str(e.value)
 
     def test_validate_names_against_project_interactions(self, project):
         """

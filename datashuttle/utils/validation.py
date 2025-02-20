@@ -105,7 +105,7 @@ def get_datatype_error(datatype_name, path_):
 
 def handle_path(message, path_):
     if path_:
-        message += f" Path: {path_}"
+        message += f" Path: {path_.as_posix()}"
     return message
 
 
