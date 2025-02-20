@@ -5,6 +5,7 @@ import pytest
 from base import BaseTest
 
 from datashuttle import DataShuttle
+from datashuttle.configs import canonical_configs
 from datashuttle.utils import validation
 from datashuttle.utils.custom_exceptions import NeuroBlueprintError
 
@@ -130,10 +131,8 @@ class TestPersistentSettings(BaseTest):
         # test all defaults
         settings = project._load_persistent_settings()
         tui_settings = settings["tui"]
-        try:
-            assert tui_settings == self.get_settings_default()
-        except:
-            breakpoint()
+        assert tui_settings == self.get_settings_default()
+
         # change all defaults
         new_tui_settings = self.get_settings_changed()
 
@@ -168,21 +167,17 @@ class TestPersistentSettings(BaseTest):
         )
 
     def get_settings_default(self):
-        return {
-            "create_checkboxes_on": {
-                "behav": True,
-                "ephys": True,
-                "funcimg": True,
-                "anat": True,
-            },
+        """
+        Hard-coded default settings that should mirror `canonical_configs`
+        and should be changed whenever the canonical configs are changed.
+        This is to protect against accidentally changing these configs.
+        """
+        default_settings = {
+            "create_checkboxes_on": {},
             "transfer_checkboxes_on": {
-                "behav": False,
-                "ephys": False,
-                "funcimg": False,
-                "anat": False,
-                "all": True,
-                "all_datatype": False,
-                "all_non_datatype": False,
+                "all": {"on": True, "displayed": True},
+                "all_datatype": {"on": False, "displayed": True},
+                "all_non_datatype": {"on": False, "displayed": True},
             },
             "top_level_folder_select": {
                 "create_tab": "rawdata",
@@ -193,23 +188,37 @@ class TestPersistentSettings(BaseTest):
             "overwrite_existing_files": "never",
             "dry_run": False,
         }
+        default_settings["create_checkboxes_on"] = {
+            key: {"on": True, "displayed": True}
+            for key in canonical_configs.get_broad_datatypes()
+        } | {
+            key: {"on": False, "displayed": False}
+            for key in canonical_configs.quick_get_narrow_datatypes()
+        }
+
+        default_settings["transfer_checkboxes_on"].update(
+            {
+                key: {"on": False, "displayed": True}
+                for key in canonical_configs.get_broad_datatypes()
+            }
+            | {
+                key: {"on": False, "displayed": False}
+                for key in canonical_configs.quick_get_narrow_datatypes()
+            }
+        )
+
+        return default_settings
 
     def get_settings_changed(self):
-        return {
-            "create_checkboxes_on": {
-                "behav": False,
-                "ephys": False,
-                "funcimg": False,
-                "anat": False,
-            },
+        """
+        The default settings with every possible setting changed.
+        """
+        changed_settings = {
+            "create_checkboxes_on": {},
             "transfer_checkboxes_on": {
-                "behav": True,
-                "ephys": True,
-                "funcimg": True,
-                "anat": True,
-                "all": False,
-                "all_datatype": True,
-                "all_non_datatype": True,
+                "all": {"on": False, "displayed": False},
+                "all_datatype": {"on": True, "displayed": False},
+                "all_non_datatype": {"on": True, "displayed": False},
             },
             "top_level_folder_select": {
                 "create_tab": "derivatives",
@@ -220,3 +229,23 @@ class TestPersistentSettings(BaseTest):
             "overwrite_existing_files": "always",
             "dry_run": True,
         }
+
+        changed_settings["create_checkboxes_on"] = {
+            key: {"on": False, "displayed": False}
+            for key in canonical_configs.get_broad_datatypes()
+        } | {
+            key: {"on": False, "displayed": False}
+            for key in canonical_configs.quick_get_narrow_datatypes()
+        }
+
+        changed_settings["transfer_checkboxes_on"].update(
+            {
+                key: {"on": True, "displayed": False}
+                for key in canonical_configs.get_broad_datatypes()
+            }
+            | {
+                key: {"on": True, "displayed": True}
+                for key in canonical_configs.quick_get_narrow_datatypes()
+            }
+        )
+        return changed_settings

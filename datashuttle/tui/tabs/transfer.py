@@ -25,9 +25,12 @@ from textual.widgets import (
 
 from datashuttle.tui.custom_widgets import (
     ClickableInput,
-    DatatypeCheckboxes,
     TopLevelFolderSelect,
     TreeAndInputTab,
+)
+from datashuttle.tui.screens.datatypes import (
+    DatatypeCheckboxes,
+    DisplayedDatatypesScreen,
 )
 from datashuttle.tui.screens.modal_dialogs import (
     FinishTransferScreen,
@@ -131,11 +134,16 @@ class TransferTab(TreeAndInputTab):
                 id="transfer_session_input",
                 placeholder="e.g. ses-001",
             ),
+            # These are almost identical to create tab
             Label("Datatype(s)", id="transfer_datatype_label"),
             DatatypeCheckboxes(
                 self.interface,
                 create_or_transfer="transfer",
                 id="transfer_custom_datatype_checkboxes",
+            ),
+            Button(
+                "Displayed Datatypes",
+                id="transfer_tab_displayed_datatypes_button",
             ),
         ]
 
@@ -211,7 +219,13 @@ class TransferTab(TreeAndInputTab):
             "#transfer_tab_overwrite_select",
             "#transfer_tab_dry_run_checkbox",
         ]:
-            self.query_one(id).tooltip = get_tooltip(id)
+            from textual.css.query import NoMatches
+
+            try:
+                # if checkbox is removed by user, hard to predict, skip.
+                self.query_one(id).tooltip = get_tooltip(id)
+            except NoMatches:
+                pass
 
         self.switch_transfer_widgets_display()
 
@@ -228,7 +242,7 @@ class TransferTab(TreeAndInputTab):
         if event.select.id == "transfer_tab_overwrite_select":
             assert event.select.value in ["Never", "Always", "If Source Newer"]
             format_select = event.select.value.lower().replace(" ", "_")
-            self.interface.update_tui_settings(
+            self.interface.save_tui_settings(
                 format_select,
                 "overwrite_existing_files",
             )
@@ -237,7 +251,7 @@ class TransferTab(TreeAndInputTab):
         if (
             event.checkbox.id == "transfer_tab_dry_run_checkbox"
         ):  # TODO: UPDATE NAMES TO INC. TAB! ALSO UPDATE TOOLTIPS
-            self.interface.update_tui_settings(
+            self.interface.save_tui_settings(
                 event.checkbox.value,
                 "dry_run",
             )
@@ -318,6 +332,18 @@ class TransferTab(TreeAndInputTab):
                 message, self.transfer_data
             )
             self.mainwindow.push_screen(self.finish_transfer_screen)
+
+        if event.button.id == "transfer_tab_displayed_datatypes_button":
+            self.mainwindow.push_screen(
+                DisplayedDatatypesScreen("transfer", self.interface),
+                self.refresh_after_datatype_changed,
+            )
+
+    async def refresh_after_datatype_changed(self, ignore):
+        await self.recompose()
+        self.on_mount()
+        self.query_one("#transfer_custom_radiobutton").value = True
+        self.switch_transfer_widgets_display()
 
     def on_custom_directory_tree_directory_tree_special_key_press(
         self, event: CustomDirectoryTree.DirectoryTreeSpecialKeyPress

@@ -225,9 +225,23 @@ def get_test_config_arguments_dict(
     return dict_
 
 
-def get_all_folders_used(value=True):
-    datatype_names = canonical_configs.get_datatypes()
-    return {name: value for name in datatype_names}
+def get_all_broad_folders_used(value=True):
+    """
+    The `folders_used` construct tells the tests which
+    folders were used (e.g. created or transferred) and
+    which are not. This means the expected datatypes
+    can be checked.
+
+    When we want to get the broad folders used, we set all
+    broad datatypes to `True` and all narrow datatype names to `False`.
+    """
+    broad_datatypes = {
+        name: value for name in canonical_configs.get_broad_datatypes()
+    }
+    narrow_datatypes_off = {
+        name: False for name in canonical_configs.quick_get_narrow_datatypes()
+    }
+    return broad_datatypes | narrow_datatypes_off
 
 
 # -----------------------------------------------------------------------------
@@ -248,8 +262,9 @@ def check_folder_tree_is_correct(
     check all exist.
 
     The folder_used variable must be passed so we don't
-    rely on project settings itself,
-    as this doesn't explicitly test this.
+    rely on project settings itself, as this doesn't explicitly test this.
+
+    `created_folder_dict` is used to test the output of `create_folders`.
     """
     if created_folder_dict is None:
         created_folder_dict = {}
@@ -350,7 +365,7 @@ def check_datatype_sub_ses_uploaded_correctly(
 
 
 def make_and_check_local_project_folders(
-    project, top_level_folder, subs, sessions, datatype
+    project, top_level_folder, subs, sessions, datatype, datatypes_used=None
 ):
     """
     Make a local project folder tree with the specified datatype,
@@ -360,6 +375,9 @@ def make_and_check_local_project_folders(
     to write a placeholder file in all bottom-level
     directories so ensure they are transferred.
     """
+    if datatypes_used is None:
+        datatypes_used = get_all_broad_folders_used()
+
     make_local_folders_with_files_in(
         project, top_level_folder, subs, sessions, datatype
     )
@@ -368,7 +386,7 @@ def make_and_check_local_project_folders(
         get_top_level_folder_path(project, "local", top_level_folder),
         subs,
         sessions,
-        get_all_folders_used(),
+        datatypes_used,
     )
 
 
@@ -626,7 +644,7 @@ def check_working_top_level_folder_only_exists(
     do not inadvertently transfer other top-level folders.
     """
     if folders_used is None:
-        folders_used = get_all_folders_used()
+        folders_used = get_all_broad_folders_used()
 
     check_folder_tree_is_correct(
         base_path_to_check,

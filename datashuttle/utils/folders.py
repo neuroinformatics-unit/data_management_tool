@@ -57,9 +57,15 @@ def create_folder_trees(
     """
     datatype_passed = datatype not in [[""], ""]
 
+    if "all" in datatype or datatype == "all":
+        raise ValueError(
+            "Using 'all' keyboard for `create_folders` "
+            "datatype is deprecated in 0.6.0"
+        )
+
     if datatype_passed:
         is_invalid, message = validation.datatypes_are_invalid(
-            datatype, allow_all=True
+            datatype, allow_all=False
         )
         if is_invalid:
             utils.log_and_raise_error(message, NeuroBlueprintError)

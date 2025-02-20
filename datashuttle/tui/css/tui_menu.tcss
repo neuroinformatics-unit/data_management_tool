@@ -223,6 +223,39 @@ config label and button align center */
 }
 
 
+/* DisplayedDatatypesScreen --------------------------------------------------------------- */
+
+DisplayedDatatypesScreen {
+    align: center middle;
+}
+
+#display_datatypes_screen_container {
+    height: 80%;
+    width: 80%;
+    background: $primary-background;
+    border: tall $panel-lighten-3;
+ }
+
+ #displayed_datatypes_selection_list {
+    overflow: hidden scroll;
+ }
+
+#display_datatypes_selection_container {
+    height: 75%;
+    overflow: hidden auto;
+}
+
+#display_datatypes_toplevel_label {
+    padding: 1 1 1 1;
+}
+
+
+#display_datatypes_screen_container:light {
+    border: tall $panel-darken-3;
+    background: $boost;
+}
+
+
 /* CreateFoldersSettingsScreen --------------------------------------------------------------- */
 
 CreateFoldersSettingsScreen {

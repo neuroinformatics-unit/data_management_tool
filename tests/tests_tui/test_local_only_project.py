@@ -164,6 +164,14 @@ class TestTuiLocalOnlyProject(TuiBase):
             )
             await self.close_messagebox(pilot)
 
+            # Force refresh, for some reason the project-selector button on
+            # main screen is getting stuck every ~1/5 times without this.
+            pilot.app.screen.recompose()
+            pilot.app.refresh()
+            pilot.app.screen.refresh()
+
+            await pilot.pause()
+
             # Go back to the transfer screen and check the configs are
             # correct and the placeholder tab is used and disabled.
             await self.check_and_click_onto_existing_project(

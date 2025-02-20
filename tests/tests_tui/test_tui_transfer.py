@@ -2,6 +2,7 @@ import pytest
 import test_utils
 from tui_base import TuiBase
 
+from datashuttle.configs import canonical_configs
 from datashuttle.tui.app import TuiApp
 
 
@@ -207,7 +208,7 @@ class TestTuiTransfer(TuiBase):
 
             await self.run_transfer(pilot, upload_or_download)
 
-            folders_used = test_utils.get_all_folders_used(value=False)
+            folders_used = test_utils.get_all_broad_folders_used(value=False)
             folders_used.update({"behav": True, "funcimg": True})
 
             test_utils.check_working_top_level_folder_only_exists(
@@ -263,7 +264,7 @@ class TestTuiTransfer(TuiBase):
                 top_level_folder,
                 subs,
                 sessions,
-                "all",
+                canonical_configs.get_broad_datatypes(),
             )
         (
             _,

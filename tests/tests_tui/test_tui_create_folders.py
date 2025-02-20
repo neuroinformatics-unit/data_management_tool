@@ -4,7 +4,7 @@ import pytest
 import test_utils
 from tui_base import TuiBase
 
-from datashuttle.configs import canonical_folders
+from datashuttle.configs import canonical_configs
 from datashuttle.tui.app import TuiApp
 from datashuttle.tui.screens.create_folder_settings import (
     CreateFoldersSettingsScreen,
@@ -61,7 +61,7 @@ class TestTuiCreateFolders(TuiBase):
                 project,
                 subs=sub_test_list,
                 sessions=[],
-                folder_used=test_utils.get_all_folders_used(value=False),
+                folder_used=test_utils.get_all_broad_folders_used(value=False),
             )
 
             await self.fill_input(
@@ -76,7 +76,7 @@ class TestTuiCreateFolders(TuiBase):
                 project,
                 subs=sub_test_list,
                 sessions=ses_test_list,
-                folder_used=test_utils.get_all_folders_used(value=False),
+                folder_used=test_utils.get_all_broad_folders_used(value=False),
             )
 
             await self.iterate_and_check_all_datatype_folders(
@@ -607,7 +607,7 @@ class TestTuiCreateFolders(TuiBase):
                 base_folder=(project.cfg["local_path"] / "derivatives"),
                 subs=["sub-001"],
                 sessions=["ses-001"],
-                folder_used=test_utils.get_all_folders_used(),
+                folder_used=test_utils.get_all_broad_folders_used(),
             )
 
             await pilot.pause()
@@ -620,9 +620,9 @@ class TestTuiCreateFolders(TuiBase):
         self, pilot, subs, sessions
     ):
         project = pilot.app.screen.interface.project
-        folder_used = test_utils.get_all_folders_used(value=False)
+        folder_used = test_utils.get_all_broad_folders_used(value=False)
 
-        for datatype in canonical_folders.get_datatype_folders().keys():
+        for datatype in canonical_configs.get_broad_datatypes():
 
             await self.scroll_to_click_pause(
                 pilot,

@@ -41,8 +41,8 @@ class CreateFoldersSettingsScreen(ModalScreen):
     the window is closed, the `name_template` is stored in datashuttle's
     persistent settings.
 
-    The Create tab validation on Inputs is immediately updated on closing
-    of this screen.
+    The Create tab validation of input widgets is immediately updated
+    on closing of this screen.
 
     Attributes
     ----------
@@ -196,7 +196,7 @@ class CreateFoldersSettingsScreen(ModalScreen):
                 self.mainwindow.show_modal_error_dialog(output)
 
         elif event.button.id == "create_settings_bypass_validation_button":
-            self.interface.update_tui_settings(False, "bypass_validation")
+            self.interface.save_tui_settings(False, "bypass_validation")
 
     def make_name_templates_from_widgets(self) -> Dict:
         return {
@@ -220,7 +220,7 @@ class CreateFoldersSettingsScreen(ModalScreen):
             event.checkbox.id
             == "create_folders_settings_bypass_validation_checkbox"
         ):
-            self.interface.update_tui_settings(is_on, "bypass_validation")
+            self.interface.save_tui_settings(is_on, "bypass_validation")
 
             self.query_one(
                 "#template_settings_validation_on_checkbox"
