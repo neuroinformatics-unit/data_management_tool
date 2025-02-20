@@ -77,8 +77,12 @@ def get_datetime_error(key, name, strfmt, path_):
 
 
 def get_template_error(name, regexp, path_):
+    """
+    The missing full-stop at the end is intentional, to avoid
+    confusion when reading the regexp.
+    """
     return handle_path(
-        f"TEMPLATE: The name: {name} does not match the template: {regexp}.",
+        f"TEMPLATE: The name: {name} does not match the template: {regexp}",
         path_,
     )
 
@@ -167,7 +171,7 @@ def validate_list_of_names(
             name, path_
         )
         error_messages += datetime_are_iso_format(name, path_)
-        error_messages + names_dont_match_templates(
+        error_messages += names_dont_match_templates(
             name, path_, prefix, name_templates
         )
 
@@ -610,7 +614,10 @@ def validate_project(
     for ses_paths in folder_paths["ses"].values():
 
         error_messages += validate_list_of_names(
-            ses_paths, "ses", check_value_lengths=False
+            ses_paths,
+            "ses",
+            check_value_lengths=False,
+            name_templates=name_templates,  # TODO: why did tests miss this!?!?
         )
 
     # Next, check inconsistent value lengths across the entire project
@@ -723,8 +730,7 @@ def validate_names_against_project(
 
         # First, validate the list of passed session names
         error_messages += validate_list_of_names(
-            ses_names,
-            "ses",
+            ses_names, "ses", name_templates=name_templates
         )
 
         if folder_paths["sub"]:

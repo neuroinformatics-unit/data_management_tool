@@ -721,16 +721,18 @@ class TestValidation(BaseTest):
         project.create_folders("rawdata", "sub-02@DATE@", "ses-001_@DATETIME@")
 
         # break the name template validation, for sub, should raise
-        with pytest.raises(NeuroBlueprintError):
-            project.create_folders("rawdata", "sub-03_date_202401")
+        with pytest.raises(NeuroBlueprintError) as e:
+            project.create_folders("rawdata", "sub-03_datex-202401")
+        assert "TEMPLATE: The name: sub-03_datex-202401" in str(e.value)
 
         # break the name template validation, for ses, should raise
-        with pytest.raises(NeuroBlueprintError):
+        with pytest.raises(NeuroBlueprintError) as e:
             project.create_folders(
-                "rawdata", "sub-03_date_20240101", "ses-001_date-202401"
+                "rawdata", "sub-03_date-20240101", "ses-001_datex-20241212"
             )
+        assert "TEMPLATE: The name: ses-001_datex-20241212" in str(e.value)
 
-        # Do a quick test for tim
+        # Do a quick test for time
         name_templates["sub"] = "sub-\d\d_@TIME@"
         project.set_name_templates(name_templates)
 
@@ -739,12 +741,44 @@ class TestValidation(BaseTest):
             "rawdata",
             "sub-03@TIME@",
         )
+
+        # use misspelled time tag, should raise
         with pytest.raises(NeuroBlueprintError):
-            # use misspelled time tag, should raise
-            project.create_folders(
-                "rawdata",
-                "sub-03_mime_010101",
-            )
+            project.create_folders("rawdata", "sub-03_mime_010101")
+        assert "TEMPLATE: The name: ses-001_datex-20241212" in str(e.value)
+
+    def test_name_templates_validate_project(self, project):
+        """
+        TODO
+        """
+        name_templates = {
+            "on": True,
+            "sub": "sub-\d\d_id-\d.?",
+            "ses": "ses-\d\d_id-\d.?",
+        }
+        project.set_name_templates(name_templates)
+
+        project.create_folders(
+            "rawdata", "sub-01_id-2b", "ses-01_id-1a", bypass_validation=True
+        )
+
+        project.validate_project("rawdata", "error", local_only=True)
+
+        project.create_folders(
+            "rawdata", "sub-02_id-a1", "ses-02_id-aa", bypass_validation=True
+        )
+
+        with pytest.warns(UserWarning) as w:
+            project.validate_project("rawdata", "warn", local_only=True)
+
+        assert (
+            "TEMPLATE: The name: sub-02_id-a1 does not match the template: sub-\\d\\d_id-\\d.?"
+            in str(w[0].message)
+        )
+        assert (
+            "TEMPLATE: The name: ses-02_id-aa does not match the template: ses-\\d\\d_id-\\d.?"
+            in str(w[1].message)
+        )
 
     # ----------------------------------------------------------------------------------
     # Test Quick Validation Function
