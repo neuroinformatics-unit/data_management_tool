@@ -987,3 +987,16 @@ def datatypes_are_invalid(
         return True, message
 
     return False, ""
+
+
+# TODO: check all docstrings, tidy up existing
+# TODO: tidy up some functions
+
+# TODO: check_high_level_project_structure
+# TODO: check broad vs. narrow
+# TODO: tidy up check_high_level_project_structure
+
+# 1) get all datatype folders
+# 2) perform the validation checks
+
+# do docs
